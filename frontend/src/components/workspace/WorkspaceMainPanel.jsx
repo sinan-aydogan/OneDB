@@ -137,6 +137,10 @@ export default function WorkspaceMainPanel({
   selectDbAndTable,
   setInputVal,
   setIsCommandOpen,
+  moveColumn,
+  resetColumnOrder,
+  resetColumnFilters,
+  orderedColumns,
 }) {
   if (currentTableData) {
     return (
@@ -202,6 +206,10 @@ export default function WorkspaceMainPanel({
           isAutoRefreshMenuOpen={isAutoRefreshMenuOpen}
           setIsAutoRefreshMenuOpen={setIsAutoRefreshMenuOpen}
           setAutoRefreshInt={setAutoRefreshInt}
+          moveColumn={moveColumn}
+          onResetColumnOrder={resetColumnOrder}
+          onResetColumnFilters={resetColumnFilters}
+          orderedColumns={orderedColumns}
         />
 
         <div className="flex-1 overflow-auto flex flex-col bg-[#18181b]">
@@ -265,6 +273,7 @@ export default function WorkspaceMainPanel({
               handleDeleteRow={handleDeleteRow}
               copyRowWithHeaders={copyRowWithHeaders}
               onCellContextMenu={openCellContextMenu}
+              moveColumn={moveColumn}
               showToolbar={false}
             />
           )}

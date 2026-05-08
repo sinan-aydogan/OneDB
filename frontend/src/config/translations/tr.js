@@ -78,6 +78,12 @@ export const tr = {
   exportSql: 'SQL Çıktısı Al',
   filters: 'Filtreler',
   columns: 'Sütunlar',
+  searchColumns: 'Sütunlarda ara...',
+  viewSettings: 'Görünüm Ayarları',
+  activeOnly: 'Sadece Aktifler',
+  showAllColumns: 'Tüm Sütunları Göster',
+  resetColumnOrder: 'Sütun Sırasını Sıfırla',
+  noColumnsFound: 'Sütun bulunamadı.',
   import: 'İçe Aktar',
   export: 'Dışa Aktar',
 

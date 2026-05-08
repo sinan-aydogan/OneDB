@@ -129,6 +129,10 @@ export default function useWorkspaceMainPanelViewModel(params) {
     selectDbAndTable,
     setInputVal,
     setIsCommandOpen,
+    moveColumn,
+    resetColumnOrder,
+    resetColumnFilters,
+    orderedColumns,
   } = params;
 
   return {
@@ -261,5 +265,9 @@ export default function useWorkspaceMainPanelViewModel(params) {
     selectDbAndTable,
     setInputVal,
     setIsCommandOpen,
+    moveColumn,
+    resetColumnOrder,
+    resetColumnFilters,
+    orderedColumns,
   };
 }

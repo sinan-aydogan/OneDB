@@ -14,8 +14,10 @@ import {
   Pin,
   Eye,
   Search,
-  GripVertical,
+  Settings,
+  MoreVertical,
   RotateCcw,
+  GripVertical,
 } from 'lucide-react';
 import ToggleSwitch from '../shared/ToggleSwitch.jsx';
 import MenuSurface from '../shared/MenuSurface.jsx';
@@ -105,9 +107,9 @@ export default function TableTabsToolbar({
   setIsAutoRefreshMenuOpen,
   setAutoRefreshInt,
   moveColumn,
-  orderedColumns,
   onResetColumnOrder,
   onResetColumnFilters,
+  orderedColumns,
 }) {
   const colorizeDbLabelsByDatabase = settings?.tabs?.colorizeDbLabelsByDatabase === true;
   const tableTabs = useMemo(
@@ -168,6 +170,25 @@ export default function TableTabsToolbar({
     () => (draggingTabId ? tabById[draggingTabId] || null : null),
     [draggingTabId, tabById],
   );
+
+  const [columnSearchQuery, setColumnSearchQuery] = useState('');
+  const [columnShowOnlyVisible, setColumnShowOnlyVisible] = useState(false);
+  const [columnOptionsMenuOpen, setColumnOptionsMenuOpen] = useState(false);
+  const columnOptionsButtonRef = useRef(null);
+  const [draggedColumn, setDraggedColumn] = useState(null);
+  const [dropTargetColumn, setDropTargetColumn] = useState(null);
+
+  const displayColumns = useMemo(() => {
+    let cols = orderedColumns || [];
+    if (columnShowOnlyVisible) {
+      cols = cols.filter((col) => !hiddenColumns.has(col.name));
+    }
+    if (columnSearchQuery.trim()) {
+      const q = columnSearchQuery.toLowerCase();
+      cols = cols.filter((col) => col.name.toLowerCase().includes(q));
+    }
+    return cols;
+  }, [orderedColumns, columnShowOnlyVisible, columnSearchQuery, hiddenColumns]);
   const dragGhostStyle = useMemo(() => {
     if (!pointerDrag || !draggedTab || !draggingTabId) return null;
     return {
@@ -828,123 +849,145 @@ export default function TableTabsToolbar({
                     anchor={tableColumnsButtonRef}
                     placement="bottom-end"
                     onClick={(e) => e.stopPropagation()}
-                    className="p-3 z-[120] w-72"
+                    className="p-2 z-[120] w-64 flex flex-col"
                   >
                     <div className="flex items-center justify-between mb-2 px-1">
                       <div className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">
                         {t('columns')}
                       </div>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={onResetColumnOrder}
-                          className="text-[10px] text-zinc-500 hover:text-zinc-300 transition-colors flex items-center gap-1"
-                          title={t('resetOrder')}
-                        >
-                          <RotateCcw className="w-2.5 h-2.5" />
-                          {t('reset')}
-                        </button>
-                      </div>
                     </div>
 
-                    {/* Search and Filters */}
-                    <div className="space-y-2 mb-3">
-                      <div className="relative">
-                        <Search className="absolute left-2 top-1.5 w-3 h-3 text-zinc-500" />
+                    <div className="flex items-center gap-1 mb-2 px-1">
+                      <div className="relative flex-1">
+                        <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-zinc-500" />
                         <input
                           type="text"
+                          autoFocus
                           value={columnSearchQuery}
                           onChange={(e) => setColumnSearchQuery(e.target.value)}
                           placeholder={t('searchColumns')}
-                          className="w-full bg-[#18181b] border border-[#333] rounded px-7 py-1.5 text-xs text-zinc-200 focus:outline-none focus:border-zinc-500"
+                          className="w-full bg-[#18181b] border border-[#333] rounded px-6 py-1 text-[11px] text-zinc-200 focus:outline-none focus:border-zinc-500 transition-colors"
                         />
                         {columnSearchQuery && (
                           <button
                             onClick={() => setColumnSearchQuery('')}
-                            className="absolute right-2 top-1.5 text-zinc-500 hover:text-zinc-300"
+                            className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-zinc-500 hover:text-zinc-300"
                           >
-                            <X className="w-3 h-3" />
+                            <X className="w-2.5 h-2.5" />
                           </button>
                         )}
                       </div>
-                      <div className="flex items-center justify-between px-1">
-                        <span className="text-[11px] text-zinc-400">{t('showOnlyVisible')}</span>
-                        <ToggleSwitch
-                          active={columnShowOnlyVisible}
-                          onChange={() => setColumnShowOnlyVisible(!columnShowOnlyVisible)}
-                          tc={tc}
-                        />
+                      <div className="relative">
+                        <button
+                          ref={columnOptionsButtonRef}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setColumnOptionsMenuOpen(!columnOptionsMenuOpen);
+                          }}
+                          className={`p-1.5 rounded border transition-colors ${columnOptionsMenuOpen ? `${tc.border} ${tc.textLight} ${tc.lightBg}` : 'border-[#333] text-zinc-400 hover:bg-[#2e2e32] hover:text-zinc-200'}`}
+                        >
+                          <Settings className="w-3.5 h-3.5" />
+                        </button>
+                        <MenuSurface
+                          open={columnOptionsMenuOpen}
+                          anchor={columnOptionsButtonRef}
+                          placement="bottom-end"
+                          className="p-1 z-[130] w-48 shadow-2xl border-[#333]"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <div className="px-2 py-1.5 flex items-center justify-between text-[11px] text-zinc-400 border-b border-[#2e2e32] mb-1">
+                            <span>{t('viewSettings')}</span>
+                          </div>
+                          <div className="px-2 py-1.5 flex items-center justify-between hover:bg-[#2e2e32] rounded transition-colors group">
+                            <span className="text-xs text-zinc-300">{t('activeOnly')}</span>
+                            <ToggleSwitch
+                              checked={columnShowOnlyVisible}
+                              onChange={() => setColumnShowOnlyVisible(!columnShowOnlyVisible)}
+                              tc={tc}
+                              className="scale-75 origin-right"
+                            />
+                          </div>
+                          <button
+                            onClick={() => {
+                              onResetColumnFilters?.();
+                              setColumnShowOnlyVisible(false);
+                            }}
+                            className="w-full text-left px-2 py-1.5 text-xs text-zinc-300 hover:bg-[#2e2e32] rounded transition-colors flex items-center gap-2"
+                          >
+                            <Eye className="w-3 h-3 text-zinc-500" />
+                            {t('showAllColumns')}
+                          </button>
+                          <div className="h-[1px] bg-[#2e2e32] my-1" />
+                          <button
+                            onClick={() => {
+                              onResetColumnOrder?.();
+                              setColumnOptionsMenuOpen(false);
+                            }}
+                            className="w-full text-left px-2 py-1.5 text-xs text-zinc-300 hover:bg-[#2e2e32] rounded transition-colors flex items-center gap-2"
+                          >
+                            <RotateCcw className="w-3 h-3 text-zinc-500" />
+                            {t('resetColumnOrder')}
+                          </button>
+                        </MenuSurface>
                       </div>
                     </div>
 
-                    <div className="max-h-[350px] overflow-y-auto pr-1 -mr-1 space-y-0.5">
-                      {filteredColumns.map((col) => (
-                        <div
-                          key={col.name}
-                          draggable={!columnSearchQuery && !columnShowOnlyVisible}
-                          onDragStart={(e) => {
-                            e.dataTransfer.setData('text/plain', col.name);
-                            setDraggedColumn(col.name);
-                          }}
-                          onDragOver={(e) => {
-                            e.preventDefault();
-                            if (draggedColumn && draggedColumn !== col.name) {
-                              setDropTargetColumn(col.name);
-                            }
-                          }}
-                          onDragEnd={() => {
-                            setDraggedColumn(null);
-                            setDropTargetColumn(null);
-                          }}
-                          onDrop={(e) => {
-                            e.preventDefault();
-                            const fromName = e.dataTransfer.getData('text/plain');
-                            if (fromName && fromName !== col.name) {
-                              moveColumn(fromName, col.name);
-                            }
-                            setDraggedColumn(null);
-                            setDropTargetColumn(null);
-                          }}
-                          className={`group flex items-center gap-2 px-1 py-1 rounded transition-colors ${draggedColumn === col.name ? 'opacity-40' : 'hover:bg-[#2e2e32]'} ${dropTargetColumn === col.name ? `border-b-2 ${tc.border}` : ''}`}
-                        >
+                    <div className="max-h-[300px] overflow-y-auto pr-1 custom-scrollbar">
+                      {displayColumns.length > 0 ? (
+                        displayColumns.map((col) => (
                           <div
-                            className={`p-1 cursor-grab active:cursor-grabbing text-zinc-600 group-hover:text-zinc-400 transition-colors ${columnSearchQuery || columnShowOnlyVisible ? 'invisible' : ''}`}
+                            key={col.name}
+                            draggable
+                            onDragStart={(e) => {
+                              e.dataTransfer.setData('columnName', col.name);
+                              setDraggedColumn(col.name);
+                            }}
+                            onDragEnd={() => {
+                              setDraggedColumn(null);
+                              setDropTargetColumn(null);
+                            }}
+                            onDragOver={(e) => {
+                              e.preventDefault();
+                              if (draggedColumn && draggedColumn !== col.name) {
+                                setDropTargetColumn(col.name);
+                              }
+                            }}
+                            onDragLeave={() => {
+                              if (dropTargetColumn === col.name) {
+                                setDropTargetColumn(null);
+                              }
+                            }}
+                            onDrop={(e) => {
+                              e.preventDefault();
+                              setDropTargetColumn(null);
+                              const fromName = e.dataTransfer.getData('columnName');
+                              if (fromName && fromName !== col.name) {
+                                moveColumn(fromName, col.name);
+                              }
+                            }}
+                            className={`flex items-center gap-2 px-1 group transition-colors border-b-2 ${
+                              dropTargetColumn === col.name ? `border-b-2 ${tc.border}` : 'border-b-transparent'
+                            } ${draggedColumn === col.name ? 'opacity-30' : ''}`}
                           >
-                            <GripVertical className="w-3.5 h-3.5" />
+                            <div className="cursor-grab active:cursor-grabbing p-1 text-zinc-600 group-hover:text-zinc-400 transition-colors">
+                              <GripVertical className="w-3.5 h-3.5" />
+                            </div>
+                            <label className="flex-1 flex items-center gap-2 py-1.5 cursor-pointer text-xs text-zinc-300">
+                              <input
+                                type="checkbox"
+                                checked={!hiddenColumns.has(col.name)}
+                                onChange={() => toggleColumnVisibility(col.name)}
+                                className={`rounded-sm bg-[#18181b] border-[#444] ${tc.accent}`}
+                              />
+                              <span className="truncate">{col.name}</span>
+                            </label>
                           </div>
-                          <label className="flex-1 flex items-center gap-2 cursor-pointer py-0.5">
-                            <input
-                              type="checkbox"
-                              checked={!hiddenColumns.has(col.name)}
-                              onChange={() => toggleColumnVisibility(col.name)}
-                              className={`rounded-sm bg-[#18181b] border-[#444] ${tc.accent}`}
-                            />
-                            <span
-                              className={`text-xs ${hiddenColumns.has(col.name) ? 'text-zinc-500' : 'text-zinc-200'}`}
-                            >
-                              {col.name}
-                            </span>
-                          </label>
-                        </div>
-                      ))}
-                      {filteredColumns.length === 0 && (
-                        <div className="text-center py-4 text-xs text-zinc-500">
+                        ))
+                      ) : (
+                        <div className="py-8 text-center text-zinc-600 text-[11px] italic">
                           {t('noColumnsFound')}
                         </div>
                       )}
-                    </div>
-
-                    <div className="mt-3 pt-2 border-t border-[#333] flex justify-between">
-                      <button
-                        onClick={() => {
-                          onResetColumnFilters?.();
-                          setColumnShowOnlyVisible(false);
-                          setColumnSearchQuery('');
-                        }}
-                        className="text-[11px] text-zinc-500 hover:text-zinc-300 transition-colors flex items-center gap-1.5 px-2 py-1"
-                      >
-                        <Eye className="w-3 h-3" />
-                        {t('resetFilters')}
-                      </button>
                     </div>
                   </MenuSurface>
                 </div>

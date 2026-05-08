@@ -100,6 +100,7 @@ export default function TableBrowserView({
   const [dropTargetColumn, setDropTargetColumn] = useState(null);
   const ROW_HEIGHT = 36;
   const OVERSCAN_ROWS = 10;
+  const [draggedColumn, setDraggedColumn] = useState(null);
   const safePage = Math.max(1, Number(page || 1));
   const safeRowsPerPage = Math.max(1, Number(rowsPerPage || 1));
   const currentPageRowCount = Math.max(0, Number(processedData?.length || 0));
@@ -470,7 +471,24 @@ export default function TableBrowserView({
                     }}
                     className={`px-4 py-2 border-r border-[#2e2e32] font-normal last:border-r-0 hover:bg-[#232323] transition-colors group relative align-top cursor-default ${
                       pinned ? 'sticky bg-[#1c1c1c] shadow-[inset_-1px_0_0_rgba(46,46,50,1)]' : ''
-                    } ${dropTargetColumn === col.name ? `border-b-2 ${tc.border}` : ''} ${draggedColumn === col.name ? 'opacity-40' : ''}`}
+                    } ${draggedColumn === col.name ? 'opacity-30' : ''}`}
+                    draggable
+                    onDragStart={(e) => {
+                      e.dataTransfer.setData('columnName', col.name);
+                      setDraggedColumn(col.name);
+                    }}
+                    onDragEnd={() => setDraggedColumn(null)}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      e.dataTransfer.dropEffect = 'move';
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      const fromName = e.dataTransfer.getData('columnName');
+                      if (fromName && fromName !== col.name) {
+                        moveColumn?.(fromName, col.name);
+                      }
+                    }}
                     style={{
                       resize: 'vertical',
                       overflow: 'hidden',

@@ -110,6 +110,10 @@ export default function useWorkspaceViewModelInputs({
   setColumnMenu,
   applyColumnFilter,
   clearColumnFilter,
+  moveColumn,
+  resetColumnOrder,
+  resetColumnFilters,
+  orderedColumns,
   getColumnIcon,
   toggleAllRows,
   toggleRowSelection,
@@ -416,6 +420,10 @@ export default function useWorkspaceViewModelInputs({
     selectDbAndTable,
     setInputVal,
     setIsCommandOpen,
+    moveColumn,
+    resetColumnOrder,
+    resetColumnFilters,
+    orderedColumns,
     showToast,
   };
 

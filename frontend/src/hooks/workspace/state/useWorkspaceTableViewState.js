@@ -25,6 +25,8 @@ export default function useWorkspaceTableViewState({
   setSortConfig,
   pinnedColumnsByTable,
   setPinnedColumnsByTable,
+  columnOrderByTable,
+  setColumnOrderByTable,
   selectedRows,
   setSelectedRows,
   rowsPerPage,
@@ -69,9 +71,35 @@ export default function useWorkspaceTableViewState({
 
   const pinnedColumnSet = useMemo(() => new Set(pinnedColumnNames), [pinnedColumnNames]);
 
+  const orderedColumns = useMemo(() => {
+    if (!currentTableData || !currentTableKey) return [];
+    const defaultCols = currentTableData.columns;
+    const order = columnOrderByTable?.[currentTableKey] || [];
+    if (order.length === 0) return defaultCols;
+
+    const colMap = new Map(defaultCols.map((c) => [c.name, c]));
+    const result = [];
+    const added = new Set();
+
+    order.forEach((name) => {
+      if (colMap.has(name)) {
+        result.push(colMap.get(name));
+        added.add(name);
+      }
+    });
+
+    defaultCols.forEach((col) => {
+      if (!added.has(col.name)) {
+        result.push(col);
+      }
+    });
+
+    return result;
+  }, [currentTableData, currentTableKey, columnOrderByTable]);
+
   const visibleColumns = useMemo(() => {
     if (!currentTableData) return [];
-    const filteredColumns = currentTableData.columns.filter((col) => !hiddenColumns.has(col.name));
+    const filteredColumns = orderedColumns.filter((col) => !hiddenColumns.has(col.name));
     if (pinnedColumnNames.length === 0) {
       return filteredColumns;
     }
@@ -82,7 +110,7 @@ export default function useWorkspaceTableViewState({
       .filter(Boolean);
     const unpinnedColumns = filteredColumns.filter((column) => !pinnedColumnSet.has(column.name));
     return [...pinnedColumns, ...unpinnedColumns];
-  }, [currentTableData, hiddenColumns, pinnedColumnNames, pinnedColumnSet]);
+  }, [orderedColumns, hiddenColumns, pinnedColumnNames, pinnedColumnSet]);
 
   const isColumnPinned = (columnName) => pinnedColumnSet.has(columnName);
 
@@ -106,6 +134,53 @@ export default function useWorkspaceTableViewState({
 
       return next;
     });
+  };
+
+  const moveColumn = (fromName, toName) => {
+    if (!fromName || !toName || fromName === toName || !currentTableKey) return;
+
+    // We handle reordering differently based on whether the columns are pinned or not.
+    // If BOTH are pinned, move within pinned state.
+    // If BOTH are unpinned, move within general order state.
+    // Otherwise, we might need to toggle pin status (but for now let's keep it simple: move in their respective "groups").
+
+    const isFromPinned = pinnedColumnSet.has(fromName);
+    const isToPinned = pinnedColumnSet.has(toName);
+
+    if (isFromPinned && isToPinned) {
+      const nextPinned = [...pinnedColumnNames];
+      const fromIdx = nextPinned.indexOf(fromName);
+      const toIdx = nextPinned.indexOf(toName);
+      nextPinned.splice(fromIdx, 1);
+      nextPinned.splice(toIdx, 0, fromName);
+      setPinnedColumnsByTable((prev) => ({ ...prev, [currentTableKey]: nextPinned }));
+    } else if (!isFromPinned && !isToPinned) {
+      const nextOrder = orderedColumns.map((c) => c.name);
+      const fromIdx = nextOrder.indexOf(fromName);
+      const toIdx = nextOrder.indexOf(toName);
+      nextOrder.splice(fromIdx, 1);
+      nextOrder.splice(toIdx, 0, fromName);
+      setColumnOrderByTable((prev) => ({ ...prev, [currentTableKey]: nextOrder }));
+    }
+  };
+
+  const resetColumnOrder = () => {
+    if (!currentTableKey) return;
+    setColumnOrderByTable((prev) => {
+      const next = { ...prev };
+      delete next[currentTableKey];
+      return next;
+    });
+    setPinnedColumnsByTable((prev) => {
+      const next = { ...prev };
+      delete next[currentTableKey];
+      return next;
+    });
+  };
+
+  const resetColumnFilters = () => {
+    setHiddenColumns(new Set());
+    // Also might want to clear server filters, but this specifically resets visibility.
   };
 
   const copyRowWithHeaders = (row) => {
@@ -206,6 +281,10 @@ export default function useWorkspaceTableViewState({
     toggleColumnPin,
     copyRowWithHeaders,
     toggleColumnVisibility,
+    moveColumn,
+    resetColumnOrder,
+    resetColumnFilters,
+    orderedColumns,
     processedData,
     paginatedData,
     totalPages,

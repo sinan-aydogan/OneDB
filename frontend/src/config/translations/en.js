@@ -82,6 +82,12 @@ export const en = {
   exportSql: 'Export SQL',
   filters: 'Filters',
   columns: 'Columns',
+  searchColumns: 'Search columns...',
+  viewSettings: 'View Settings',
+  activeOnly: 'Active Only',
+  showAllColumns: 'Show All Columns',
+  resetColumnOrder: 'Reset Column Order',
+  noColumnsFound: 'No columns found.',
   import: 'Import',
   export: 'Export',
 
