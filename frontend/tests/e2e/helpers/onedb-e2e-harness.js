@@ -387,7 +387,11 @@ export async function installOneDbApiMock(page, options = {}) {
 
   await page.route('**/*', async (route) => {
     const url = new URL(route.request().url());
-    const action = url.searchParams.get('api');
+    let action = url.searchParams.get('api');
+
+    if (!action && url.pathname.startsWith('/api/')) {
+      action = url.pathname.substring(5); // Extract action after /api/
+    }
 
     if (!action) {
       await route.continue();

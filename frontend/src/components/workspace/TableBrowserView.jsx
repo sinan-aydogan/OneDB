@@ -83,6 +83,7 @@ export default function TableBrowserView({
   handleDeleteRow,
   copyRowWithHeaders,
   onCellContextMenu,
+  moveColumn,
   showToolbar = true,
 }) {
   const selectClass = `w-full appearance-none bg-[#18181b] border border-[#3a3a3f] rounded-md text-zinc-100 transition-colors shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] ${tc.focusRing}`;
@@ -95,6 +96,8 @@ export default function TableBrowserView({
   const [scrollTop, setScrollTop] = useState(0);
   const [viewportHeight, setViewportHeight] = useState(0);
   const [pinnedLeftOffsets, setPinnedLeftOffsets] = useState({});
+  const [draggedColumn, setDraggedColumn] = useState(null);
+  const [dropTargetColumn, setDropTargetColumn] = useState(null);
   const ROW_HEIGHT = 36;
   const OVERSCAN_ROWS = 10;
   const safePage = Math.max(1, Number(page || 1));
@@ -465,16 +468,43 @@ export default function TableBrowserView({
                         delete columnHeaderRefs.current[col.name];
                       }
                     }}
-                    className={`px-4 py-2 border-r border-[#2e2e32] font-normal last:border-r-0 hover:bg-[#232323] transition-colors group relative align-top ${
+                    className={`px-4 py-2 border-r border-[#2e2e32] font-normal last:border-r-0 hover:bg-[#232323] transition-colors group relative align-top cursor-default ${
                       pinned ? 'sticky bg-[#1c1c1c] shadow-[inset_-1px_0_0_rgba(46,46,50,1)]' : ''
-                    }`}
+                    } ${dropTargetColumn === col.name ? `border-b-2 ${tc.border}` : ''} ${draggedColumn === col.name ? 'opacity-40' : ''}`}
                     style={{
-                      resize: 'horizontal',
-                      overflow: 'visible',
+                      resize: 'vertical',
+                      overflow: 'hidden',
                       minWidth: '100px',
                       ...(pinned && pinnedLeft !== undefined
                         ? { left: `${pinnedLeft}px`, zIndex: 24 }
                         : {}),
+                    }}
+                    draggable
+                    onDragStart={(e) => {
+                      e.dataTransfer.setData('text/plain', col.name);
+                      setDraggedColumn(col.name);
+                    }}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      if (draggedColumn && draggedColumn !== col.name) {
+                        setDropTargetColumn(col.name);
+                      }
+                    }}
+                    onDragLeave={() => {
+                      setDropTargetColumn(null);
+                    }}
+                    onDragEnd={() => {
+                      setDraggedColumn(null);
+                      setDropTargetColumn(null);
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      const fromName = e.dataTransfer.getData('text/plain');
+                      if (fromName && fromName !== col.name) {
+                        moveColumn?.(fromName, col.name);
+                      }
+                      setDraggedColumn(null);
+                      setDropTargetColumn(null);
                     }}
                   >
                     <div className="flex items-center justify-between">

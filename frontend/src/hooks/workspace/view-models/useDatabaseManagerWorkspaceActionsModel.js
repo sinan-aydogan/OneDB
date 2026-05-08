@@ -83,6 +83,7 @@ export default function useDatabaseManagerWorkspaceActionsModel(model, apiModel)
     currentDriver,
     copyToClipboard,
     getCellTextValue,
+    clearAllColumnFilters: workspaceFilters.clearAllColumnFilters,
   });
   const { processedData } = workspaceTableViewState;
 

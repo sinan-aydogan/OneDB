@@ -252,6 +252,35 @@ function sanitizePinnedColumnsByTable(rawValue) {
   }, {});
 }
 
+function sanitizeColumnOrderByTable(rawValue) {
+  if (!rawValue || typeof rawValue !== 'object' || Array.isArray(rawValue)) {
+    return {};
+  }
+
+  return Object.entries(rawValue).reduce((acc, [tableKey, value]) => {
+    if (typeof tableKey !== 'string' || tableKey.trim() === '') {
+      return acc;
+    }
+    if (!Array.isArray(value)) {
+      return acc;
+    }
+
+    const deduped = [];
+    const seen = new Set();
+    value.forEach((columnName) => {
+      const normalized = String(columnName || '').trim();
+      if (!normalized || seen.has(normalized)) return;
+      seen.add(normalized);
+      deduped.push(normalized);
+    });
+
+    if (deduped.length > 0) {
+      acc[tableKey] = deduped;
+    }
+    return acc;
+  }, {});
+}
+
 export default function useWorkspaceState() {
   const [lang, setLang] = useState(() => localStorage.getItem('dbm_lang') || 'en');
 
@@ -399,6 +428,14 @@ export default function useWorkspaceState() {
     try {
       const parsed = JSON.parse(localStorage.getItem('dbm_pinned_columns') || '{}');
       return sanitizePinnedColumnsByTable(parsed);
+    } catch {
+      return {};
+    }
+  });
+  const [columnOrderByTable, setColumnOrderByTable] = useState(() => {
+    try {
+      const parsed = JSON.parse(localStorage.getItem('dbm_column_order') || '{}');
+      return sanitizeColumnOrderByTable(parsed);
     } catch {
       return {};
     }
@@ -625,6 +662,8 @@ export default function useWorkspaceState() {
     setColumnMenu,
     pinnedColumnsByTable,
     setPinnedColumnsByTable,
+    columnOrderByTable,
+    setColumnOrderByTable,
     selectedRows,
     setSelectedRows,
     page,

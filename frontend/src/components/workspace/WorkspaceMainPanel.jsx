@@ -21,6 +21,10 @@ export default function WorkspaceMainPanel({
   closeAllTableTabs,
   toggleTableTabPin,
   moveTableTab,
+  moveColumn,
+  orderedColumns,
+  onResetColumnOrder,
+  onResetColumnFilters,
   isTableTabPinned,
   selectedRows,
   setFormData,
@@ -154,6 +158,10 @@ export default function WorkspaceMainPanel({
           onToggleTableTabPin={toggleTableTabPin}
           onMoveTableTab={moveTableTab}
           isTableTabPinned={isTableTabPinned}
+          moveColumn={moveColumn}
+          orderedColumns={orderedColumns}
+          onResetColumnOrder={onResetColumnOrder}
+          onResetColumnFilters={onResetColumnFilters}
           activeDb={activeDb}
           activeTable={activeTable}
           selectedRows={selectedRows}
@@ -208,6 +216,7 @@ export default function WorkspaceMainPanel({
               pinnedColumnNames={pinnedColumnNames}
               isColumnPinned={isColumnPinned}
               toggleColumnPin={toggleColumnPin}
+              moveColumn={moveColumn}
               isColsPanelOpen={isColsPanelOpen}
               setIsColsPanelOpen={setIsColsPanelOpen}
               selectedRows={selectedRows}

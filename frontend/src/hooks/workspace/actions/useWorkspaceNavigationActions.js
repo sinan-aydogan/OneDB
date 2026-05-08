@@ -294,11 +294,7 @@ export default function useWorkspaceNavigationActions({
       if (Boolean(withoutDrag[targetIndex]?.pinned) !== Boolean(dragTab.pinned)) return prev;
 
       const insertAt = normalizedPosition === 'after' ? targetIndex + 1 : targetIndex;
-      const nextTabs = [
-        ...withoutDrag.slice(0, insertAt),
-        dragTab,
-        ...withoutDrag.slice(insertAt),
-      ];
+      const nextTabs = [...withoutDrag.slice(0, insertAt), dragTab, ...withoutDrag.slice(insertAt)];
 
       const unchanged =
         nextTabs.length === prev.length &&

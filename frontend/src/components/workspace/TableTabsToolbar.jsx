@@ -13,7 +13,11 @@ import {
   Rows,
   Pin,
   Eye,
+  Search,
+  GripVertical,
+  RotateCcw,
 } from 'lucide-react';
+import ToggleSwitch from '../shared/ToggleSwitch.jsx';
 import MenuSurface from '../shared/MenuSurface.jsx';
 import SelectField from '../shared/SelectField.jsx';
 import TemporalInputField from '../shared/TemporalInputField.jsx';
@@ -100,6 +104,10 @@ export default function TableTabsToolbar({
   isAutoRefreshMenuOpen,
   setIsAutoRefreshMenuOpen,
   setAutoRefreshInt,
+  moveColumn,
+  orderedColumns,
+  onResetColumnOrder,
+  onResetColumnFilters,
 }) {
   const colorizeDbLabelsByDatabase = settings?.tabs?.colorizeDbLabelsByDatabase === true;
   const tableTabs = useMemo(
@@ -138,6 +146,24 @@ export default function TableTabsToolbar({
     () => tableTabs.find((tab) => tab.id === tabContextMenu.tabId) || null,
     [tableTabs, tabContextMenu.tabId],
   );
+
+  // Column management local state
+  const [columnSearchQuery, setColumnSearchQuery] = useState('');
+  const [columnShowOnlyVisible, setColumnShowOnlyVisible] = useState(false);
+  const [draggedColumn, setDraggedColumn] = useState(null);
+  const [dropTargetColumn, setDropTargetColumn] = useState(null);
+
+  const filteredColumns = useMemo(() => {
+    let cols = orderedColumns || currentColumns || [];
+    if (columnSearchQuery) {
+      const q = columnSearchQuery.toLowerCase();
+      cols = cols.filter((c) => c.name.toLowerCase().includes(q));
+    }
+    if (columnShowOnlyVisible) {
+      cols = cols.filter((c) => !hiddenColumns.has(c.name));
+    }
+    return cols;
+  }, [orderedColumns, currentColumns, columnSearchQuery, columnShowOnlyVisible, hiddenColumns]);
   const draggedTab = useMemo(
     () => (draggingTabId ? tabById[draggingTabId] || null : null),
     [draggingTabId, tabById],
@@ -270,7 +296,9 @@ export default function TableTabsToolbar({
       return { tabId: last.tabId, position: 'after' };
     }
 
-    const hovered = positionedTabs.find(({ rect }) => clientX >= rect.left && clientX <= rect.right);
+    const hovered = positionedTabs.find(
+      ({ rect }) => clientX >= rect.left && clientX <= rect.right,
+    );
     if (hovered) {
       const midpoint = hovered.rect.left + hovered.rect.width / 2;
       return { tabId: hovered.tabId, position: clientX < midpoint ? 'before' : 'after' };
@@ -456,9 +484,7 @@ export default function TableTabsToolbar({
                   draggingTabId === tab.id
                     ? 'opacity-20 scale-[0.98] cursor-grabbing'
                     : 'cursor-default'
-                } ${
-                  tabDropIndicator?.tabId === tab.id ? 'ring-1 ring-emerald-300/40' : ''
-                }`}
+                } ${tabDropIndicator?.tabId === tab.id ? 'ring-1 ring-emerald-300/40' : ''}`}
                 title={`${tab.dbName}.${tab.tableName}`}
               >
                 {tabDropIndicator?.tabId === tab.id && tabDropIndicator?.position === 'before' && (
@@ -802,26 +828,123 @@ export default function TableTabsToolbar({
                     anchor={tableColumnsButtonRef}
                     placement="bottom-end"
                     onClick={(e) => e.stopPropagation()}
-                    className="p-2 z-[120] w-56"
+                    className="p-3 z-[120] w-72"
                   >
-                    <div className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider mb-2 px-1">
-                      {t('columns')}
-                    </div>
-                    <div className="max-h-[300px] overflow-y-auto">
-                      {currentColumns.map((col) => (
-                        <label
-                          key={col.name}
-                          className="flex items-center gap-2 px-2 py-1.5 hover:bg-[#2e2e32] rounded cursor-pointer text-xs text-zinc-300"
+                    <div className="flex items-center justify-between mb-2 px-1">
+                      <div className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">
+                        {t('columns')}
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={onResetColumnOrder}
+                          className="text-[10px] text-zinc-500 hover:text-zinc-300 transition-colors flex items-center gap-1"
+                          title={t('resetOrder')}
                         >
-                          <input
-                            type="checkbox"
-                            checked={!hiddenColumns.has(col.name)}
-                            onChange={() => toggleColumnVisibility(col.name)}
-                            className={`rounded-sm bg-[#18181b] border-[#444] ${tc.accent}`}
-                          />
-                          {col.name}
-                        </label>
+                          <RotateCcw className="w-2.5 h-2.5" />
+                          {t('reset')}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Search and Filters */}
+                    <div className="space-y-2 mb-3">
+                      <div className="relative">
+                        <Search className="absolute left-2 top-1.5 w-3 h-3 text-zinc-500" />
+                        <input
+                          type="text"
+                          value={columnSearchQuery}
+                          onChange={(e) => setColumnSearchQuery(e.target.value)}
+                          placeholder={t('searchColumns')}
+                          className="w-full bg-[#18181b] border border-[#333] rounded px-7 py-1.5 text-xs text-zinc-200 focus:outline-none focus:border-zinc-500"
+                        />
+                        {columnSearchQuery && (
+                          <button
+                            onClick={() => setColumnSearchQuery('')}
+                            className="absolute right-2 top-1.5 text-zinc-500 hover:text-zinc-300"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        )}
+                      </div>
+                      <div className="flex items-center justify-between px-1">
+                        <span className="text-[11px] text-zinc-400">{t('showOnlyVisible')}</span>
+                        <ToggleSwitch
+                          active={columnShowOnlyVisible}
+                          onChange={() => setColumnShowOnlyVisible(!columnShowOnlyVisible)}
+                          tc={tc}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="max-h-[350px] overflow-y-auto pr-1 -mr-1 space-y-0.5">
+                      {filteredColumns.map((col) => (
+                        <div
+                          key={col.name}
+                          draggable={!columnSearchQuery && !columnShowOnlyVisible}
+                          onDragStart={(e) => {
+                            e.dataTransfer.setData('text/plain', col.name);
+                            setDraggedColumn(col.name);
+                          }}
+                          onDragOver={(e) => {
+                            e.preventDefault();
+                            if (draggedColumn && draggedColumn !== col.name) {
+                              setDropTargetColumn(col.name);
+                            }
+                          }}
+                          onDragEnd={() => {
+                            setDraggedColumn(null);
+                            setDropTargetColumn(null);
+                          }}
+                          onDrop={(e) => {
+                            e.preventDefault();
+                            const fromName = e.dataTransfer.getData('text/plain');
+                            if (fromName && fromName !== col.name) {
+                              moveColumn(fromName, col.name);
+                            }
+                            setDraggedColumn(null);
+                            setDropTargetColumn(null);
+                          }}
+                          className={`group flex items-center gap-2 px-1 py-1 rounded transition-colors ${draggedColumn === col.name ? 'opacity-40' : 'hover:bg-[#2e2e32]'} ${dropTargetColumn === col.name ? `border-b-2 ${tc.border}` : ''}`}
+                        >
+                          <div
+                            className={`p-1 cursor-grab active:cursor-grabbing text-zinc-600 group-hover:text-zinc-400 transition-colors ${columnSearchQuery || columnShowOnlyVisible ? 'invisible' : ''}`}
+                          >
+                            <GripVertical className="w-3.5 h-3.5" />
+                          </div>
+                          <label className="flex-1 flex items-center gap-2 cursor-pointer py-0.5">
+                            <input
+                              type="checkbox"
+                              checked={!hiddenColumns.has(col.name)}
+                              onChange={() => toggleColumnVisibility(col.name)}
+                              className={`rounded-sm bg-[#18181b] border-[#444] ${tc.accent}`}
+                            />
+                            <span
+                              className={`text-xs ${hiddenColumns.has(col.name) ? 'text-zinc-500' : 'text-zinc-200'}`}
+                            >
+                              {col.name}
+                            </span>
+                          </label>
+                        </div>
                       ))}
+                      {filteredColumns.length === 0 && (
+                        <div className="text-center py-4 text-xs text-zinc-500">
+                          {t('noColumnsFound')}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="mt-3 pt-2 border-t border-[#333] flex justify-between">
+                      <button
+                        onClick={() => {
+                          onResetColumnFilters?.();
+                          setColumnShowOnlyVisible(false);
+                          setColumnSearchQuery('');
+                        }}
+                        className="text-[11px] text-zinc-500 hover:text-zinc-300 transition-colors flex items-center gap-1.5 px-2 py-1"
+                      >
+                        <Eye className="w-3 h-3" />
+                        {t('resetFilters')}
+                      </button>
                     </div>
                   </MenuSurface>
                 </div>

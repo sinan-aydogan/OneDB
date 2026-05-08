@@ -30,6 +30,9 @@ export default function useWorkspaceTableViewState({
   rowsPerPage,
   copyToClipboard,
   getCellTextValue,
+  columnOrderByTable,
+  setColumnOrderByTable,
+  clearAllColumnFilters,
 }) {
   const handleSort = (key) => {
     let direction = 'asc';
@@ -146,6 +149,54 @@ export default function useWorkspaceTableViewState({
     }
   };
 
+  const moveColumn = (fromName, toName) => {
+    if (!currentTableKey || !currentTableData) return;
+    const columns = currentTableData.columns || [];
+    const currentOrder = columnOrderByTable[currentTableKey] || columns.map((c) => c.name);
+    const newOrder = [...currentOrder];
+    const fromIndex = newOrder.indexOf(fromName);
+    const toIndex = newOrder.indexOf(toName);
+
+    if (fromIndex !== -1 && toIndex !== -1) {
+      newOrder.splice(fromIndex, 1);
+      newOrder.splice(toIndex, 0, fromName);
+      setColumnOrderByTable((prev) => ({ ...prev, [currentTableKey]: newOrder }));
+    }
+  };
+
+  const onResetColumnOrder = () => {
+    if (!currentTableKey) return;
+    setColumnOrderByTable((prev) => {
+      const next = { ...prev };
+      delete next[currentTableKey];
+      return next;
+    });
+  };
+
+  const onResetColumnFilters = () => {
+    setHiddenColumns(new Set());
+    clearAllColumnFilters();
+  };
+
+  const orderedColumns = useMemo(() => {
+    if (!currentTableData) return [];
+    const columns = currentTableData.columns || [];
+    const order = columnOrderByTable[currentTableKey];
+    if (!order) return columns;
+
+    const colMap = new Map(columns.map((c) => [c.name, c]));
+    const result = [];
+    order.forEach((name) => {
+      if (colMap.has(name)) {
+        result.push(colMap.get(name));
+        colMap.delete(name);
+      }
+    });
+    // Add any remaining columns that weren't in the saved order
+    colMap.forEach((col) => result.push(col));
+    return result;
+  }, [currentTableData, columnOrderByTable, currentTableKey]);
+
   return {
     handleSort,
     currentTableDdl,
@@ -160,5 +211,9 @@ export default function useWorkspaceTableViewState({
     totalPages,
     toggleRowSelection,
     toggleAllRows,
+    moveColumn,
+    onResetColumnOrder,
+    onResetColumnFilters,
+    orderedColumns,
   };
 }

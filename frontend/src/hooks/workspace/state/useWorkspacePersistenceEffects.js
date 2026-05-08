@@ -45,6 +45,7 @@ export default function useWorkspacePersistenceEffects({
   openTableTabs,
   activeTableTabId,
   pinnedColumnsByTable,
+  columnOrderByTable,
 }) {
   useEffect(() => {
     safeSetItem('dbm_lang', lang);
@@ -96,4 +97,8 @@ export default function useWorkspacePersistenceEffects({
   useEffect(() => {
     return scheduleSetItem('dbm_pinned_columns', JSON.stringify(pinnedColumnsByTable || {}), 150);
   }, [pinnedColumnsByTable]);
+
+  useEffect(() => {
+    return scheduleSetItem('dbm_column_order', JSON.stringify(columnOrderByTable || {}), 150);
+  }, [columnOrderByTable]);
 }
